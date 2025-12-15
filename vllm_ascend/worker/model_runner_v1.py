@@ -2269,6 +2269,8 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                         print(f"[DEBUG OLD]   Block Size: {kv_cache_spec.block_size}")
                         print(f"[DEBUG OLD]   Heads: {kv_cache_spec.num_kv_heads}")
                         print(f"[DEBUG OLD]   Head Size: {kv_cache_spec.head_size}")
+                        print(f"[DEBUG OLD]   Raw tensor size: {tensor_size}")
+                        print(f"[DEBUG OLD]   Page size bytes: {kv_cache_spec.page_size_bytes}")
 
                         # 计算实际内存使用 - 老版本310P返回5个值
                         if len(kv_cache_shape) == 5 and is_310p():
@@ -2288,6 +2290,7 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                             print(f"[DEBUG OLD]   Unexpected shape format: {kv_cache_shape}")
 
                         print(f"[DEBUG OLD]   Num blocks: {num_blocks}")
+                        print(f"[DEBUG OLD]   Calculated from size: {tensor_size} / {kv_cache_spec.page_size_bytes} = {tensor_size // kv_cache_spec.page_size_bytes}")
                     # DEBUG_END: KV缓存形状信息
                     if self.model_config.is_deepseek_mla:
 
@@ -2362,11 +2365,8 @@ class NPUModelRunner(LoRAModelRunnerMixin):
 
                                 # DEBUG_START: 格式转换后的内存信息
                                 if ascend_config and is_310p():
-                                    memory_after_mb = kv_cache.numel() * kv_cache.element_size() / (1024 * 1024)
                                     print(f"[DEBUG OLD] After format cast - Layer {layer_name}, Cache {i}:")
                                     print(f"[DEBUG OLD]   New format: {torch_npu.get_npu_format(kv_cache)}")
-                                    print(f"[DEBUG OLD]   Memory after cast: {memory_after_mb:.2f} MB")
-                                    print(f"[DEBUG OLD]   Memory increase: {memory_after_mb - memory_before_mb:.2f} MB")
                                 # DEBUG_END: 格式转换信息
                             else:
                                 cache_size = math.prod(cache_shape)
