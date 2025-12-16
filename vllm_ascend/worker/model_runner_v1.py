@@ -2006,7 +2006,8 @@ class NPUModelRunner(LoRAModelRunnerMixin):
     def profile_run(self) -> None:
         from vllm.logger import logger
         from vllm_ascend.platform import NPUPlatform
-        from vllm.utils import GiB_bytes
+        # GiB_bytes constant
+GiB_bytes = 1 << 30
 
         free_before, total = NPUPlatform.mem_get_info()
         logger.info(f"[OLD_PROFILE_RUN] Start: Free={free_before/GiB_bytes:.2f}GiB")
