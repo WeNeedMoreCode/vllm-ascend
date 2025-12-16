@@ -2007,7 +2007,7 @@ class NPUModelRunner(LoRAModelRunnerMixin):
         from vllm.logger import logger
         from vllm_ascend.platform import NPUPlatform
         # GiB_bytes constant
-GiB_bytes = 1 << 30
+        GiB_bytes = 1 << 30
 
         free_before, total = NPUPlatform.mem_get_info()
         logger.info(f"[OLD_PROFILE_RUN] Start: Free={free_before/GiB_bytes:.2f}GiB")
@@ -2398,14 +2398,18 @@ GiB_bytes = 1 << 30
 
                                     print(f"[DEBUG MEMORY BEFORE ALLOC OLD] Layer {layer_name}, Cache {i}:")
                                     print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Free memory: {free_memory} bytes ({free_memory/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Total memory: {total_memory} bytes ({total_memory/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Used memory: {(total_memory-free_memory)/1024**3:.2f} GiB")
                                     print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Required memory: {required_memory} bytes ({required_memory/1024**3:.2f} GiB)")
 
                                     kv_cache_temp = torch.zeros(cache_shape, dtype=dtype, device=self.device)
 
                                     # DEBUG: 检查分配后的内存状态
-                                    free_memory_after, _ = torch_npu.npu.mem_get_info()
+                                    free_memory_after, total_memory_after = torch_npu.npu.mem_get_info()
                                     print(f"[DEBUG MEMORY AFTER ALLOC OLD] Layer {layer_name}, Cache {i}:")
                                     print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Free memory: {free_memory_after} bytes ({free_memory_after/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Total memory: {total_memory_after} bytes ({total_memory_after/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Used memory: {(total_memory_after-free_memory_after)/1024**3:.2f} GiB)")
                                     print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Memory consumed: {(free_memory - free_memory_after)/1024**3:.2f} GiB)")
 
                                     memory_before_mb = kv_cache_temp.numel() * kv_cache_temp.element_size() / (1024 * 1024)
@@ -2423,7 +2427,15 @@ GiB_bytes = 1 << 30
 
                                 # DEBUG_START: 格式转换后的内存信息
                                 if ascend_config and is_310p():
+                                    # 检查格式转换后的内存状态
+                                    free_memory_after_cast, total_memory_after_cast = torch_npu.npu.mem_get_info()
+                                    memory_consumed_by_cast = (free_memory_after - free_memory_after_cast)/1024**3
+
                                     print(f"[DEBUG OLD] After format cast - Layer {layer_name}, Cache {i}:")
+                                    print(f"[DEBUG OLD]   Free memory: {free_memory_after_cast} bytes ({free_memory_after_cast/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG OLD]   Total memory: {total_memory_after_cast} bytes ({total_memory_after_cast/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG OLD]   Used memory: {(total_memory_after_cast-free_memory_after_cast)/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG OLD]   Memory consumed by format cast: {memory_consumed_by_cast:.2f} GiB")
                                     print(f"[DEBUG OLD]   New format: {torch_npu.get_npu_format(kv_cache)}")
                                 # DEBUG_END: 格式转换信息
                             else:
