@@ -2303,12 +2303,36 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                                             num_kv_heads, rope_dim)
                         if self.vllm_config.kv_transfer_config is None:
                             # For no disaggregate pd scenario, allocate kv cache in normal way
+                            # DEBUG: 检查MLA分配前的内存状态
+                            import torch_npu
+                            free_memory_before, total_memory = torch_npu.npu.mem_get_info()
+
+                            # 计算MLA需要的内存
+                            rope_elements = 1
+                            for dim in rope_cache_shape:
+                                rope_elements *= dim
+                            nope_elements = 1
+                            for dim in nope_cache_shape:
+                                nope_elements *= dim
+                            required_memory_mla = (rope_elements + nope_elements) * dtype.itemsize
+
+                            print(f"[DEBUG MEMORY BEFORE ALLOC OLD] Layer {layer_name} (MLA):")
+                            print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Free memory: {free_memory_before} bytes ({free_memory_before/1024**3:.2f} GiB)")
+                            print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Required memory: {required_memory_mla} bytes ({required_memory_mla/1024**3:.2f} GiB)")
+
                             rope_cache = torch.zeros(rope_cache_shape,
                                                      dtype=dtype,
                                                      device=self.device)
                             nope_cache = torch.zeros(nope_cache_shape,
                                                      dtype=dtype,
                                                      device=self.device)
+
+                            # DEBUG: 检查MLA分配后的内存状态
+                            free_memory_after, _ = torch_npu.npu.mem_get_info()
+                            print(f"[DEBUG MEMORY AFTER ALLOC OLD] Layer {layer_name} (MLA):")
+                            print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Free memory: {free_memory_after} bytes ({free_memory_after/1024**3:.2f} GiB)")
+                            print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Memory consumed: {(free_memory_before - free_memory_after)/1024**3:.2f} GiB)")
+
                             rope_cache = torch_npu.npu_format_cast(
                                 rope_cache, acl_format)
                             nope_cache = torch_npu.npu_format_cast(
@@ -2349,7 +2373,28 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                             if self.vllm_config.kv_transfer_config is None:
                                 # DEBUG_START: 添加格式转换前的内存信息
                                 if ascend_config and is_310p():
+                                    # DEBUG: 检查分配前的内存状态
+                                    import torch_npu
+                                    free_memory, total_memory = torch_npu.npu.mem_get_info()
+
+                                    # 计算需要的内存大小
+                                    elements = 1
+                                    for dim in cache_shape:
+                                        elements *= dim
+                                    required_memory = elements * dtype.itemsize
+
+                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD] Layer {layer_name}, Cache {i}:")
+                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Free memory: {free_memory} bytes ({free_memory/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Required memory: {required_memory} bytes ({required_memory/1024**3:.2f} GiB)")
+
                                     kv_cache_temp = torch.zeros(cache_shape, dtype=dtype, device=self.device)
+
+                                    # DEBUG: 检查分配后的内存状态
+                                    free_memory_after, _ = torch_npu.npu.mem_get_info()
+                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD] Layer {layer_name}, Cache {i}:")
+                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Free memory: {free_memory_after} bytes ({free_memory_after/1024**3:.2f} GiB)")
+                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Memory consumed: {(free_memory - free_memory_after)/1024**3:.2f} GiB)")
+
                                     memory_before_mb = kv_cache_temp.numel() * kv_cache_temp.element_size() / (1024 * 1024)
                                     print(f"[DEBUG OLD] Before format cast - Layer {layer_name}, Cache {i}:")
                                     print(f"[DEBUG OLD]   Cache shape: {cache_shape}")
