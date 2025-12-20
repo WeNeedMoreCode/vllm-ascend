@@ -306,12 +306,14 @@ class AscendAttentionBackendImpl(AttentionImpl):
             if "layers.0." in layer_name or "layers.1." in layer_name:
                 print(f"[PRECISION DEBUG OLD WEIGHTS] ANALYZING WEIGHTS FOR {layer_name}:")
 
-                # 尝试获取投影权重 (假设layer有o_proj, q_proj, k_proj, v_proj等属性)
+                # 尝试获取投影权重 - 使用更通用的方法
                 weight_info = {}
+                print(f"[PRECISION DEBUG OLD WEIGHTS]   Available attributes: {[attr for attr in dir(layer) if not attr.startswith('_')]}")
 
                 # 检查各种可能的权重属性
-                for attr_name in ['q_proj', 'k_proj', 'v_proj', 'o_proj']:
+                for attr_name in ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'qkv_proj']:
                     if hasattr(layer, attr_name):
+                        print(f"[PRECISION DEBUG OLD WEIGHTS]   Found {attr_name} attribute")
                         proj_layer = getattr(layer, attr_name)
                         if hasattr(proj_layer, 'weight') and proj_layer.weight is not None:
                             weight = proj_layer.weight
@@ -324,19 +326,29 @@ class AscendAttentionBackendImpl(AttentionImpl):
                                 'max': weight.float().max().item(),
                                 'device': weight.device
                             }
+                            print(f"[PRECISION DEBUG OLD WEIGHTS]     {attr_name}_weight: shape={weight.shape}, mean={weight.float().mean().item():.8f}")
+                        else:
+                            print(f"[PRECISION DEBUG OLD WEIGHTS]     {attr_name} has no weight attribute")
+                    else:
+                        print(f"[PRECISION DEBUG OLD WEIGHTS]   No {attr_name} attribute found")
 
-                            # 检查bias
-                            if hasattr(proj_layer, 'bias') and proj_layer.bias is not None:
-                                bias = proj_layer.bias
-                                weight_info[f'{attr_name}_bias'] = {
-                                    'shape': bias.shape,
-                                    'dtype': bias.dtype,
-                                    'mean': bias.float().mean().item(),
-                                    'std': bias.float().std().item(),
-                                    'min': bias.float().min().item(),
-                                    'max': bias.float().max().item(),
-                                    'device': bias.device
-                                }
+                # 检查layer本身是否有weights参数
+                if hasattr(layer, 'parameters'):
+                    print(f"[PRECISION DEBUG OLD WEIGHTS]   Layer parameters: {[name for name, _ in layer.named_parameters()]}")
+
+                # 检查所有torch.nn.Parameter
+                for name, param in layer.named_parameters():
+                    if any(x in name.lower() for x in ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'qkv']):
+                        weight_info[f'named_{name}'] = {
+                            'shape': param.shape,
+                            'dtype': param.dtype,
+                            'mean': param.float().mean().item(),
+                            'std': param.float().std().item(),
+                            'min': param.float().min().item(),
+                            'max': param.float().max().item(),
+                            'device': param.device
+                        }
+                        print(f"[PRECISION DEBUG OLD WEIGHTS]     Found named parameter {name}: shape={param.shape}, mean={param.float().mean():.8f}")
 
                 # 输出权重信息
                 for weight_key, weight_data in weight_info.items():
