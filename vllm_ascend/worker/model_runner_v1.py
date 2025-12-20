@@ -2202,14 +2202,14 @@ class NPUModelRunner(LoRAModelRunnerMixin):
         """
         # DEBUG_START: 添加初始化信息 - 用于对比新老版本内存分配差异
         ascend_config = get_ascend_config()
-        if ascend_config and is_310p():
-            total_memory_gb = torch.npu.get_device_properties(self.device).total_memory / (1024**3)
-            print(f"[DEBUG OLD] Initializing KV Cache on 310P:")
-            print(f"[DEBUG OLD]   Total GPU Memory: {total_memory_gb:.2f} GB")
-            print(f"[DEBUG OLD]   KV Cache dtype: {self.kv_cache_dtype}")
-            print(f"[DEBUG OLD]   Block size: {self.block_size}")
-            print(f"[DEBUG OLD]   Max blocks: {kv_cache_config.num_blocks}")
-            print(f"[DEBUG OLD]   TorchAir Graph Enabled: {self.torchair_graph_enabled}")
+        # if ascend_config and is_310p():
+        #     total_memory_gb = torch.npu.get_device_properties(self.device).total_memory / (1024**3)
+            # print(f"[DEBUG OLD] Initializing KV Cache on 310P:")
+            # print(f"[DEBUG OLD]   Total GPU Memory: {total_memory_gb:.2f} GB")
+            # print(f"[DEBUG OLD]   KV Cache dtype: {self.kv_cache_dtype}")
+            # print(f"[DEBUG OLD]   Block size: {self.block_size}")
+            # print(f"[DEBUG OLD]   Max blocks: {kv_cache_config.num_blocks}")
+            # print(f"[DEBUG OLD]   TorchAir Graph Enabled: {self.torchair_graph_enabled}")
         # DEBUG_END: 初始化信息
 
         self.kv_cache_config = kv_cache_config
@@ -2277,13 +2277,13 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                     # DEBUG_START: 添加KV缓存形状和大小信息 - 用于对比新老版本内存分配差异
                     ascend_config = get_ascend_config()
                     if ascend_config and is_310p():
-                        print(f"[DEBUG OLD] Layer {layer_name} KV Cache:")
-                        print(f"[DEBUG OLD]   Shape: {kv_cache_shape}")
-                        print(f"[DEBUG OLD]   Block Size: {kv_cache_spec.block_size}")
-                        print(f"[DEBUG OLD]   Heads: {kv_cache_spec.num_kv_heads}")
-                        print(f"[DEBUG OLD]   Head Size: {kv_cache_spec.head_size}")
-                        print(f"[DEBUG OLD]   Raw tensor size: {tensor_size}")
-                        print(f"[DEBUG OLD]   Page size bytes: {kv_cache_spec.page_size_bytes}")
+                        # print(f"[DEBUG OLD] Layer {layer_name} KV Cache:")
+                        # print(f"[DEBUG OLD]   Shape: {kv_cache_shape}")
+                        # print(f"[DEBUG OLD]   Block Size: {kv_cache_spec.block_size}")
+                        # print(f"[DEBUG OLD]   Heads: {kv_cache_spec.num_kv_heads}")
+                        # print(f"[DEBUG OLD]   Head Size: {kv_cache_spec.head_size}")
+                        # print(f"[DEBUG OLD]   Raw tensor size: {tensor_size}")
+                        # print(f"[DEBUG OLD]   Page size bytes: {kv_cache_spec.page_size_bytes}")
 
                         # 计算实际内存使用 - 老版本310P返回5个值
                         if len(kv_cache_shape) == 5 and is_310p():
@@ -2294,16 +2294,17 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                             align_dim = kv_cache_shape[4]
                             total_elements = 2 * num_blocks * compressed_features * block_size_dim * align_dim
                             kv_cache_memory_mb = (total_elements * torch.tensor([], dtype=dtype).element_size()) / (1024 * 1024)
-                            print(f"[DEBUG OLD]   310P Format: (2, {num_blocks}, {compressed_features}, {block_size_dim}, {align_dim})")
-                            print(f"[DEBUG OLD]   Total elements per tensor: {total_elements}")
-                            print(f"[DEBUG OLD]   Memory per tensor: {kv_cache_memory_mb:.2f} MB")
-                            print(f"[DEBUG OLD]   Total for K+V: {kv_cache_memory_mb * 2:.2f} MB")
+                            # print(f"[DEBUG OLD]   310P Format: (2, {num_blocks}, {compressed_features}, {block_size_dim}, {align_dim})")
+                            # print(f"[DEBUG OLD]   Total elements per tensor: {total_elements}")
+                            # print(f"[DEBUG OLD]   Memory per tensor: {kv_cache_memory_mb:.2f} MB")
+                            # print(f"[DEBUG OLD]   Total for K+V: {kv_cache_memory_mb * 2:.2f} MB")
                         else:
                             # 普通格式或其他格式
-                            print(f"[DEBUG OLD]   Unexpected shape format: {kv_cache_shape}")
+                            # print(f"[DEBUG OLD]   Unexpected shape format: {kv_cache_shape}")
+                            pass
 
-                        print(f"[DEBUG OLD]   Num blocks: {num_blocks}")
-                        print(f"[DEBUG OLD]   Calculated from size: {tensor_size} / {kv_cache_spec.page_size_bytes} = {tensor_size // kv_cache_spec.page_size_bytes}")
+                        # print(f"[DEBUG OLD]   Num blocks: {num_blocks}")
+                        # print(f"[DEBUG OLD]   Calculated from size: {tensor_size} / {kv_cache_spec.page_size_bytes} = {tensor_size // kv_cache_spec.page_size_bytes}")
                     # DEBUG_END: KV缓存形状信息
                     if self.model_config.is_deepseek_mla:
 
@@ -2329,9 +2330,9 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                                 nope_elements *= dim
                             required_memory_mla = (rope_elements + nope_elements) * dtype.itemsize
 
-                            print(f"[DEBUG MEMORY BEFORE ALLOC OLD] Layer {layer_name} (MLA):")
-                            print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Free memory: {free_memory_before} bytes ({free_memory_before/1024**3:.2f} GiB)")
-                            print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Required memory: {required_memory_mla} bytes ({required_memory_mla/1024**3:.2f} GiB)")
+                            # print(f"[DEBUG MEMORY BEFORE ALLOC OLD] Layer {layer_name} (MLA):")
+                            # print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Free memory: {free_memory_before} bytes ({free_memory_before/1024**3:.2f} GiB)")
+                            # print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Required memory: {required_memory_mla} bytes ({required_memory_mla/1024**3:.2f} GiB)")
 
                             rope_cache = torch.zeros(rope_cache_shape,
                                                      dtype=dtype,
@@ -2342,9 +2343,9 @@ class NPUModelRunner(LoRAModelRunnerMixin):
 
                             # DEBUG: 检查MLA分配后的内存状态
                             free_memory_after, _ = torch_npu.npu.mem_get_info()
-                            print(f"[DEBUG MEMORY AFTER ALLOC OLD] Layer {layer_name} (MLA):")
-                            print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Free memory: {free_memory_after} bytes ({free_memory_after/1024**3:.2f} GiB)")
-                            print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Memory consumed: {(free_memory_before - free_memory_after)/1024**3:.2f} GiB)")
+                            # print(f"[DEBUG MEMORY AFTER ALLOC OLD] Layer {layer_name} (MLA):")
+                            # print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Free memory: {free_memory_after} bytes ({free_memory_after/1024**3:.2f} GiB)")
+                            # print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Memory consumed: {(free_memory_before - free_memory_after)/1024**3:.2f} GiB)")
 
                             rope_cache = torch_npu.npu_format_cast(
                                 rope_cache, acl_format)
@@ -2396,27 +2397,27 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                                         elements *= dim
                                     required_memory = elements * dtype.itemsize
 
-                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD] Layer {layer_name}, Cache {i}:")
-                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Free memory: {free_memory} bytes ({free_memory/1024**3:.2f} GiB)")
-                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Total memory: {total_memory} bytes ({total_memory/1024**3:.2f} GiB)")
-                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Used memory: {(total_memory-free_memory)/1024**3:.2f} GiB")
-                                    print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Required memory: {required_memory} bytes ({required_memory/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG MEMORY BEFORE ALLOC OLD] Layer {layer_name}, Cache {i}:")
+                                    # print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Free memory: {free_memory} bytes ({free_memory/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Total memory: {total_memory} bytes ({total_memory/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Used memory: {(total_memory-free_memory)/1024**3:.2f} GiB")
+                                    # print(f"[DEBUG MEMORY BEFORE ALLOC OLD]   Required memory: {required_memory} bytes ({required_memory/1024**3:.2f} GiB)")
 
                                     kv_cache_temp = torch.zeros(cache_shape, dtype=dtype, device=self.device)
 
                                     # DEBUG: 检查分配后的内存状态
                                     free_memory_after, total_memory_after = torch_npu.npu.mem_get_info()
-                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD] Layer {layer_name}, Cache {i}:")
-                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Free memory: {free_memory_after} bytes ({free_memory_after/1024**3:.2f} GiB)")
-                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Total memory: {total_memory_after} bytes ({total_memory_after/1024**3:.2f} GiB)")
-                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Used memory: {(total_memory_after-free_memory_after)/1024**3:.2f} GiB)")
-                                    print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Memory consumed: {(free_memory - free_memory_after)/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG MEMORY AFTER ALLOC OLD] Layer {layer_name}, Cache {i}:")
+                                    # print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Free memory: {free_memory_after} bytes ({free_memory_after/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Total memory: {total_memory_after} bytes ({total_memory_after/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Used memory: {(total_memory_after-free_memory_after)/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG MEMORY AFTER ALLOC OLD]   Memory consumed: {(free_memory - free_memory_after)/1024**3:.2f} GiB)")
 
                                     memory_before_mb = kv_cache_temp.numel() * kv_cache_temp.element_size() / (1024 * 1024)
-                                    print(f"[DEBUG OLD] Before format cast - Layer {layer_name}, Cache {i}:")
-                                    print(f"[DEBUG OLD]   Cache shape: {cache_shape}")
-                                    print(f"[DEBUG OLD]   Memory: {memory_before_mb:.2f} MB")
-                                    print(f"[DEBUG OLD]   Current format: {torch_npu.get_npu_format(kv_cache_temp)}")
+                                    # print(f"[DEBUG OLD] Before format cast - Layer {layer_name}, Cache {i}:")
+                                    # print(f"[DEBUG OLD]   Cache shape: {cache_shape}")
+                                    # print(f"[DEBUG OLD]   Memory: {memory_before_mb:.2f} MB")
+                                    # print(f"[DEBUG OLD]   Current format: {torch_npu.get_npu_format(kv_cache_temp)}")
                                     kv_cache = torch_npu.npu_format_cast(kv_cache_temp, acl_format)
                                 else:
                                     kv_cache = torch.zeros(cache_shape,
@@ -2431,12 +2432,12 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                                     free_memory_after_cast, total_memory_after_cast = torch_npu.npu.mem_get_info()
                                     memory_consumed_by_cast = (free_memory_after - free_memory_after_cast)/1024**3
 
-                                    print(f"[DEBUG OLD] After format cast - Layer {layer_name}, Cache {i}:")
-                                    print(f"[DEBUG OLD]   Free memory: {free_memory_after_cast} bytes ({free_memory_after_cast/1024**3:.2f} GiB)")
-                                    print(f"[DEBUG OLD]   Total memory: {total_memory_after_cast} bytes ({total_memory_after_cast/1024**3:.2f} GiB)")
-                                    print(f"[DEBUG OLD]   Used memory: {(total_memory_after_cast-free_memory_after_cast)/1024**3:.2f} GiB)")
-                                    print(f"[DEBUG OLD]   Memory consumed by format cast: {memory_consumed_by_cast:.2f} GiB")
-                                    print(f"[DEBUG OLD]   New format: {torch_npu.get_npu_format(kv_cache)}")
+                                    # print(f"[DEBUG OLD] After format cast - Layer {layer_name}, Cache {i}:")
+                                    # print(f"[DEBUG OLD]   Free memory: {free_memory_after_cast} bytes ({free_memory_after_cast/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG OLD]   Total memory: {total_memory_after_cast} bytes ({total_memory_after_cast/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG OLD]   Used memory: {(total_memory_after_cast-free_memory_after_cast)/1024**3:.2f} GiB)")
+                                    # print(f"[DEBUG OLD]   Memory consumed by format cast: {memory_consumed_by_cast:.2f} GiB")
+                                    # print(f"[DEBUG OLD]   New format: {torch_npu.get_npu_format(kv_cache)}")
                                 # DEBUG_END: 格式转换信息
                             else:
                                 cache_size = math.prod(cache_shape)
