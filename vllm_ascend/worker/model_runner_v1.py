@@ -2099,6 +2099,30 @@ class NPUModelRunner(LoRAModelRunnerMixin):
         with DeviceMemoryProfiler() as m:  # noqa: SIM117
             self.model = get_model(vllm_config=self.vllm_config)
 
+        # DEBUG: 输出模型实现信息
+        print(f"[MODEL IMPLEMENTATION DEBUG OLD] Model initialization analysis:")
+        print(f"  Model type: {type(self.model).__name__}")
+        print(f"  Model module: {self.model.__class__.__module__}")
+        print(f"  Model full path: {self.model.__class__}")
+
+        # 检查第一层的实现
+        if hasattr(self.model, 'layers') and len(self.model.layers) > 0:
+            first_layer = self.model.layers[0]
+            print(f"  First layer type: {type(first_layer).__name__}")
+            print(f"  First layer module: {first_layer.__class__.__module__}")
+
+            if hasattr(first_layer, 'self_attn'):
+                first_attn = first_layer.self_attn
+                print(f"  First layer attention type: {type(first_attn).__name__}")
+                print(f"  First layer attention module: {first_attn.__class__.__module__}")
+
+        # 检查是否包含Custom关键字
+        model_str = str(type(self.model))
+        if 'Custom' in model_str:
+            print(f"  *** DETECTED CUSTOM IMPLEMENTATION ***")
+        else:
+            print(f"  *** USING STANDARD IMPLEMENTATION ***")
+
             if is_310p():
                 from vllm.model_executor.layers.linear import (
                     MergedColumnParallelLinear, QKVParallelLinear,
