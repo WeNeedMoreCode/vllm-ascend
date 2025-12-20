@@ -401,6 +401,10 @@ class AscendAttentionBackendImpl(AttentionImpl):
                 print(f"[PRECISION DEBUG OLD VERSION ATTENTION]   final_output: shape={output.shape}; mean={output.float().mean().item():.6f}; std={output.float().std().item():.6f}")
             elif attn_metadata.attn_state == AscendAttentionState.PrefillCacheHit:
                 print(f"[PRECISION DEBUG OLD PATH] Taking PrefillCacheHit path")
+                # DEBUG: 精度检查 - 老版本PrefillCacheHit路径的输入
+                print(f"[PRECISION DEBUG OLD PREFILL_CACHE_HIT ENTRY] OLD VERSION:")
+                print(f"[PRECISION DEBUG OLD PREFILL_CACHE_HIT ENTRY]   query: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
+
                 assert attn_metadata is not None
                 assert attn_metadata.attn_mask is not None
                 compress_mask = attn_metadata.attn_mask
@@ -418,8 +422,16 @@ class AscendAttentionBackendImpl(AttentionImpl):
                     num_heads=self.num_heads,
                     scale_value=self.scale,
                     out=output)
+
+                # DEBUG: 精度检查 - 老版本PrefillCacheHit路径的输出
+                print(f"[PRECISION DEBUG OLD PREFILL_CACHE_HIT EXIT] OLD VERSION:")
+                print(f"[PRECISION DEBUG OLD PREFILL_CACHE_HIT EXIT]   output: shape={output.shape}; mean={output.float().mean().item():.6f}; std={output.float().std().item():.6f}")
             elif attn_metadata.attn_state == AscendAttentionState.DecodeOnly:
                 print(f"[PRECISION DEBUG OLD PATH] Taking DecodeOnly path")
+                # DEBUG: 精度检查 - 老版本DecodeOnly路径的输入
+                print(f"[PRECISION DEBUG OLD DECODE_ONLY ENTRY] OLD VERSION:")
+                print(f"[PRECISION DEBUG OLD DECODE_ONLY ENTRY]   query: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
+
                 if is_310p():
                     # # seq_lens_tensor needs to be transferred to the device for 310P
                     attn_metadata.seq_lens = \
@@ -434,8 +446,18 @@ class AscendAttentionBackendImpl(AttentionImpl):
                     block_table=attn_metadata.block_tables,
                     context_lens=attn_metadata.seq_lens,
                     out=output)
+
+                # DEBUG: 精度检查 - 老版本DecodeOnly路径的输出
+                print(f"[PRECISION DEBUG OLD DECODE_ONLY EXIT] OLD VERSION:")
+                print(f"[PRECISION DEBUG OLD DECODE_ONLY EXIT]   output: shape={output.shape}; mean={output.float().mean().item():.6f}; std={output.float().std().item():.6f}")
             # Normal V1 situation.
             else:
+                # DEBUG: 处理其他attn_state，包括ChunkedPrefill
+                print(f"[PRECISION DEBUG OLD PATH] Taking other path (likely ChunkedPrefill), head_size={self.head_size}")
+                # DEBUG: 精度检查 - 老版本其他路径的输入
+                print(f"[PRECISION DEBUG OLD OTHER ENTRY] OLD VERSION:")
+                print(f"[PRECISION DEBUG OLD OTHER ENTRY]   query: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
+
                 # use chunked prefill for head size 192 scenario, like deepseek
                 # paged_attention_splitfuse maybe crash at such scenario
                 # TODO: vanilla path will be removed after the kernel support
@@ -484,6 +506,11 @@ class AscendAttentionBackendImpl(AttentionImpl):
         if hasattr(layer, 'quant_method') and use_kv_cache_int8:
             output = output.view(num_tokens, self.num_heads, self.head_size)
         ori_output[:, :, :] = output[:num_tokens, :, :]
+
+        # DEBUG: 精度检查 - 老版本attention的最终输出
+        print(f"[PRECISION DEBUG OLD FINAL EXIT] OLD VERSION:")
+        print(f"[PRECISION DEBUG OLD FINAL EXIT]   final_output: shape={output.shape}; mean={output.float().mean().item():.6f}; std={output.float().std().item():.6f}")
+
         return output.view(num_tokens, self.hidden_size)
 
 
