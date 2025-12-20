@@ -333,12 +333,15 @@ class AscendAttentionBackendImpl(AttentionImpl):
                         print(f"[PRECISION DEBUG OLD WEIGHTS]   No {attr_name} attribute found")
 
                 # 检查layer本身是否有weights参数
-                if hasattr(layer, 'parameters'):
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]   Layer parameters: {[name for name, _ in layer.named_parameters()]}")
+                print(f"[PRECISION DEBUG OLD WEIGHTS]   Layer parameters: {[name for name, _ in layer.named_parameters()]}")
 
-                # 检查所有torch.nn.Parameter
+                # 检查子模块中的权重
+                print(f"[PRECISION DEBUG OLD WEIGHTS]   Child modules: {[name for name, _ in layer.named_modules()]}")
+
+                # 检查所有torch.nn.Parameter (包括子模块的)
                 for name, param in layer.named_parameters():
-                    if any(x in name.lower() for x in ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'qkv']):
+                    print(f"[PRECISION DEBUG OLD WEIGHTS]   Found parameter {name}: shape={param.shape}, dtype={param.dtype}, device={param.device}")
+                    if any(x in name.lower() for x in ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'qkv', 'weight']):
                         weight_info[f'named_{name}'] = {
                             'shape': param.shape,
                             'dtype': param.dtype,
@@ -348,7 +351,22 @@ class AscendAttentionBackendImpl(AttentionImpl):
                             'max': param.float().max().item(),
                             'device': param.device
                         }
-                        print(f"[PRECISION DEBUG OLD WEIGHTS]     Found named parameter {name}: shape={param.shape}, mean={param.float().mean():.8f}")
+                        print(f"[PRECISION DEBUG OLD WEIGHTS]     ***MATCHING PARAMETER {name}***: shape={param.shape}, mean={param.float().mean():.8f}")
+
+                # 如果还没有找到权重，检查所有参数的详细信息
+                if not weight_info:
+                    print(f"[PRECISION DEBUG OLD WEIGHTS]   No matching parameters found. Checking all parameters:")
+                    for name, param in layer.named_parameters():
+                        weight_info[f'all_{name}'] = {
+                            'shape': param.shape,
+                            'dtype': param.dtype,
+                            'mean': param.float().mean().item(),
+                            'std': param.float().std().item(),
+                            'min': param.float().min().item(),
+                            'max': param.float().max().item(),
+                            'device': param.device
+                        }
+                        print(f"[PRECISION DEBUG OLD WEIGHTS]     ALL - {name}: shape={param.shape}, mean={param.float().mean():.8f}")
 
                 # 输出权重信息
                 for weight_key, weight_data in weight_info.items():
