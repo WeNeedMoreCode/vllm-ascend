@@ -297,6 +297,13 @@ class AscendAttentionBackendImpl(AttentionImpl):
         else:
             if attn_metadata is None:
                 return output.view(num_tokens, self.hidden_size)
+
+            # DEBUG: 精度检查 - 老版本attention入口处的原始输入
+            print(f"[PRECISION DEBUG OLD ENTRY] OLD VERSION attention:")
+            print(f"[PRECISION DEBUG OLD ENTRY]   query_orig: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
+            print(f"[PRECISION DEBUG OLD ENTRY]   key_orig: shape={key.shape}; mean={key.float().mean().item():.6f}; std={key.float().std().item():.6f}")
+            print(f"[PRECISION DEBUG OLD ENTRY]   value_orig: shape={value.shape}; mean={value.float().mean().item():.6f}; std={value.float().std().item():.6f}")
+
             num_actual_tokens = attn_metadata.num_actual_tokens
             assert layer._k_scale_float == 1.0 and layer._v_scale_float == 1.0
             attn_type = self.attn_type
@@ -329,11 +336,22 @@ class AscendAttentionBackendImpl(AttentionImpl):
                 assert attn_metadata.attn_mask is not None
                 mask = attn_metadata.attn_mask
                 if is_310p():
+                    # DEBUG: 精度检查 - 老版本attention输入
+                    print(f"[PRECISION DEBUG OLD VERSION ENTRY] OLD VERSION:")
+                    print(f"[PRECISION DEBUG OLD VERSION ENTRY]   query_orig: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ENTRY]   key_orig: shape={key.shape}; mean={key.float().mean().item():.6f}; std={key.float().std().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ENTRY]   value_orig: shape={value.shape}; mean={value.float().mean().item():.6f}; std={value.float().std().item():.6f}")
+
                     # align q k v output tensors
                     query = aligned_16(query)
                     key = aligned_16(key)
                     value = aligned_16(value)
                     output = aligned_16(output)
+
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED] After aligned_16:")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED]   query_aligned: shape={query.shape}; mean={query.float().mean().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED]   key_aligned: shape={key.shape}; mean={key.float().mean().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED]   value_aligned: shape={value.shape}; mean={value.float().mean().item():.6f}")
 
                     # do reformat in case of broadcasted tensors
                     mask = mask.repeat(attn_metadata.seq_lens.size(0), 1, 1, 1)
@@ -349,7 +367,14 @@ class AscendAttentionBackendImpl(AttentionImpl):
                                                num_heads=self.num_heads,
                                                num_kv_heads=self.num_kv_heads,
                                                out=output)
+
+                # DEBUG: 精度检查 - 老版本attention输出
+                print(f"[PRECISION DEBUG OLD VERSION ATTENTION] After torch_npu._npu_flash_attention:")
+                output_full_shape = output.shape
+                print(f"[PRECISION DEBUG OLD VERSION ATTENTION]   output_full: shape={output_full_shape}; mean={output.float().mean().item():.6f}; std={output.float().std().item():.6f}")
+
                 output = output[:num_tokens, :, :]
+                print(f"[PRECISION DEBUG OLD VERSION ATTENTION]   final_output: shape={output.shape}; mean={output.float().mean().item():.6f}; std={output.float().std().item():.6f}")
             elif attn_metadata.attn_state == AscendAttentionState.PrefillCacheHit:
                 assert attn_metadata is not None
                 assert attn_metadata.attn_mask is not None
