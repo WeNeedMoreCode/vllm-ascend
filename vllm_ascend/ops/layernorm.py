@@ -68,19 +68,19 @@ def forward_oot(
     import torch_npu
 
     # DEBUG: 详细信息追踪精度问题 - 老版本
-    print(f"[DEBUG LAYERNORM OLD] forward_oot called!")
-    print(f"[DEBUG LAYERNORM OLD] Device: {'310P' if is_310p() else 'Other'}")
-    print(f"[DEBUG LAYERNORM OLD] Input x shape: {x.shape}, dtype: {x.dtype}")
-    print(f"[DEBUG LAYERNORM OLD] Input x stats: mean={x.float().mean():.6f}, std={x.float().std():.6f}")
-    print(f"[DEBUG LAYERNORM OLD] Input x min/max: {x.min():.6f}/{x.max():.6f}")
-    print(f"[DEBUG LAYERNORM OLD] Weight shape: {self.weight.shape}, dtype: {self.weight.dtype}")
-    print(f"[DEBUG LAYERNORM OLD] Weight stats: mean={self.weight.float().mean():.6f}, std={self.weight.float().std():.6f}")
-    print(f"[DEBUG LAYERNORM OLD] Variance epsilon: {self.variance_epsilon}")
+    print(f"[DEBUG RMSNorm OLD] forward_oot called!")
+    print(f"[DEBUG RMSNorm OLD] Device: {'310P' if is_310p() else 'Other'}")
+    print(f"[DEBUG RMSNorm OLD] Input x shape: {x.shape}, dtype: {x.dtype}")
+    print(f"[DEBUG RMSNorm OLD] Input x stats: mean={x.float().mean():.6f}, std={x.float().std():.6f}")
+    print(f"[DEBUG RMSNorm OLD] Input x min/max: {x.min():.6f}/{x.max():.6f}")
+    print(f"[DEBUG RMSNorm OLD] Weight shape: {self.weight.shape}, dtype: {self.weight.dtype}")
+    print(f"[DEBUG RMSNorm OLD] Weight stats: mean={self.weight.float().mean():.6f}, std={self.weight.float().std():.6f}")
+    print(f"[DEBUG RMSNorm OLD] Variance epsilon: {self.variance_epsilon}")
 
     if residual is not None:
-        print(f"[DEBUG LAYERNORM OLD] Residual shape: {residual.shape}, dtype: {residual.dtype}")
-        print(f"[DEBUG LAYERNORM OLD] Residual stats: mean={residual.float().mean():.6f}, std={residual.float().std():.6f}")
-        print(f"[DEBUG LAYERNORM OLD] Residual min/max: {residual.min():.6f}/{residual.max():.6f}")
+        print(f"[DEBUG RMSNorm OLD] Residual shape: {residual.shape}, dtype: {residual.dtype}")
+        print(f"[DEBUG RMSNorm OLD] Residual stats: mean={residual.float().mean():.6f}, std={residual.float().std():.6f}")
+        print(f"[DEBUG RMSNorm OLD] Residual min/max: {residual.min():.6f}/{residual.max():.6f}")
         if is_310p():
             orig_dtype = residual.dtype
             x = x + residual.to(x.dtype)
@@ -92,18 +92,18 @@ def forward_oot(
                 x, residual, self.weight, self.variance_epsilon)
 
         # DEBUG: 输出统计信息 - 老版本
-        print(f"[DEBUG LAYERNORM OLD] Output x stats: mean={x.float().mean():.6f}, std={x.float().std():.6f}")
-        print(f"[DEBUG LAYERNORM OLD] Output x min/max: {x.min():.6f}/{x.max():.6f}")
-        print(f"[DEBUG LAYERNORM OLD] Output residual stats: mean={residual.float().mean():.6f}, std={residual.float().std():.6f}")
-        print(f"[DEBUG LAYERNORM OLD] Output residual min/max: {residual.min():.6f}/{residual.max():.6f}")
+        print(f"[DEBUG RMSNorm OLD] Output x stats: mean={x.float().mean():.6f}, std={x.float().std():.6f}")
+        print(f"[DEBUG RMSNorm OLD] Output x min/max: {x.min():.6f}/{x.max():.6f}")
+        print(f"[DEBUG RMSNorm OLD] Output residual stats: mean={residual.float().mean():.6f}, std={residual.float().std():.6f}")
+        print(f"[DEBUG RMSNorm OLD] Output residual min/max: {residual.min():.6f}/{residual.max():.6f}")
 
         return x, residual
 
     x, residual = torch_npu.npu_rms_norm(x, self.weight, self.variance_epsilon)
 
     # DEBUG: 输出统计信息 - 老版本
-    print(f"[DEBUG LAYERNORM OLD] Output x stats: mean={x.float().mean():.6f}, std={x.float().std():.6f}")
-    print(f"[DEBUG LAYERNORM OLD] Output x min/max: {x.min():.6f}/{x.max():.6f}")
+    print(f"[DEBUG RMSNorm OLD] Output x stats: mean={x.float().mean():.6f}, std={x.float().std():.6f}")
+    print(f"[DEBUG RMSNorm OLD] Output x min/max: {x.min():.6f}/{x.max():.6f}")
 
     return x
 
