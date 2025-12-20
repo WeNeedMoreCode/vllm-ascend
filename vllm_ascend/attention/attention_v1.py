@@ -302,50 +302,17 @@ class AscendAttentionBackendImpl(AttentionImpl):
             layer_name = getattr(layer, 'layer_name', 'unknown_layer')
             print(f"[PRECISION DEBUG LAYER] ===== ENTERING LAYER: {layer_name} =====")
 
-            # DEBUG: 验证实际使用的实现类
-            print(f"[IMPLEMENTATION DEBUG OLD] Layer implementation analysis:")
-            print(f"  Layer type: {type(layer).__name__}")
-            print(f"  Layer module: {layer.__class__.__module__}")
-            print(f"  Layer full path: {layer.__class__}")
-
-            # 检查attention相关的类
-            if hasattr(layer, 'self_attn'):
-                print(f"  Self-attention type: {type(layer.self_attn).__name__}")
-                print(f"  Self-attention module: {layer.self_attn.__class__.__module__}")
-                print(f"  Self-attention full path: {layer.self_attn.__class__}")
-
-            # 检查model类的层次结构
-            current_layer = layer
-            model_chain = []
-            for i in range(5):  # 最多向上查找5层
-                if hasattr(current_layer, '__class__'):
-                    model_chain.append(f"{current_layer.__class__.__name__}({current_layer.__class__.__module__})")
-                # 尝试获取父对象
-                if hasattr(current_layer, 'model'):
-                    current_layer = layer.model
-                else:
-                    break
-            print(f"  Class chain: {' -> '.join(model_chain)}")
-
-            # DEBUG: 跟踪第1层输入时的张量状态（第0层到第1层转换）
-            if 'layers.1.' in layer_name:
-                print(f"[LAYER TRANSFORM DEBUG OLD] Layer 1 attention input analysis:")
-                print(f"  query: shape={query.shape}, mean={query.float().mean():.6f}, std={query.float().std():.6f}, min={query.float().min():.6f}, max={query.float().max():.6f}")
-                print(f"  key: shape={key.shape}, mean={key.float().mean():.6f}, std={key.float().std():.6f}, min={key.float().min():.6f}, max={key.float().max():.6f}")
-                print(f"  value: shape={value.shape}, mean={value.float().mean():.6f}, std={value.float().std():.6f}, min={value.float().min():.6f}, max={value.float().max():.6f}")
-
-                # 检查是否有NaN或Inf
-                print(f"  query has NaN: {torch.isnan(query).any()}, has Inf: {torch.isinf(query).any()}")
-                print(f"  key has NaN: {torch.isnan(key).any()}, has Inf: {torch.isinf(key).any()}")
-                print(f"  value has NaN: {torch.isnan(value).any()}, has Inf: {torch.isinf(value).any()}")
-
-           
             # DEBUG: 精度检查 - 老版本attention入口处的原始输入
             print(f"[PRECISION DEBUG OLD ENTRY] OLD VERSION:")
             print(f"[PRECISION DEBUG OLD ENTRY]   query_orig: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
             print(f"[PRECISION DEBUG OLD ENTRY]   key_orig: shape={key.shape}; mean={key.float().mean().item():.6f}; std={key.float().std().item():.6f}")
             print(f"[PRECISION DEBUG OLD ENTRY]   value_orig: shape={value.shape}; mean={value.float().mean().item():.6f}; std={value.float().std().item():.6f}")
             print(f"[PRECISION DEBUG OLD ENTRY]   attn_state: {attn_metadata.attn_state}")
+
+            # DEBUG: 跟踪第1层输入时的张量状态（第0层到第1层转换）
+            if 'layers.1.' in layer_name:
+                print(f"[LAYER TRANSFORM DEBUG OLD] Layer 1 attention input analysis:")
+                print(f"  query: shape={query.shape}, mean={query.float().mean():.6f}, std={query.float().std():.6f}, min={query.float().min():.6f}, max={query.float().max():.6f}")
 
             num_actual_tokens = attn_metadata.num_actual_tokens
             assert layer._k_scale_float == 1.0 and layer._v_scale_float == 1.0
