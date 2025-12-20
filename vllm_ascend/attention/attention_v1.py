@@ -302,82 +302,19 @@ class AscendAttentionBackendImpl(AttentionImpl):
             layer_name = getattr(layer, 'layer_name', 'unknown_layer')
             print(f"[PRECISION DEBUG LAYER] ===== ENTERING LAYER: {layer_name} =====")
 
-            # DEBUG: 检查第0层和第1层的投影权重
-            if "layers.0." in layer_name or "layers.1." in layer_name:
-                print(f"[PRECISION DEBUG OLD WEIGHTS] ANALYZING WEIGHTS FOR {layer_name}:")
+            # DEBUG: 跟踪第1层输入时的张量状态（第0层到第1层转换）
+            if 'layers.1.' in layer_name:
+                print(f"[LAYER TRANSFORM DEBUG OLD] Layer 1 attention input analysis:")
+                print(f"  query: shape={query.shape}, mean={query.float().mean():.6f}, std={query.float().std():.6f}, min={query.float().min():.6f}, max={query.float().max():.6f}")
+                print(f"  key: shape={key.shape}, mean={key.float().mean():.6f}, std={key.float().std():.6f}, min={key.float().min():.6f}, max={key.float().max():.6f}")
+                print(f"  value: shape={value.shape}, mean={value.float().mean():.6f}, std={value.float().std():.6f}, min={value.float().min():.6f}, max={value.float().max():.6f}")
 
-                # 尝试获取投影权重 - 使用更通用的方法
-                weight_info = {}
-                print(f"[PRECISION DEBUG OLD WEIGHTS]   Available attributes: {[attr for attr in dir(layer) if not attr.startswith('_')]}")
+                # 检查是否有NaN或Inf
+                print(f"  query has NaN: {torch.isnan(query).any()}, has Inf: {torch.isinf(query).any()}")
+                print(f"  key has NaN: {torch.isnan(key).any()}, has Inf: {torch.isinf(key).any()}")
+                print(f"  value has NaN: {torch.isnan(value).any()}, has Inf: {torch.isinf(value).any()}")
 
-                # 检查各种可能的权重属性
-                for attr_name in ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'qkv_proj']:
-                    if hasattr(layer, attr_name):
-                        print(f"[PRECISION DEBUG OLD WEIGHTS]   Found {attr_name} attribute")
-                        proj_layer = getattr(layer, attr_name)
-                        if hasattr(proj_layer, 'weight') and proj_layer.weight is not None:
-                            weight = proj_layer.weight
-                            weight_info[f'{attr_name}_weight'] = {
-                                'shape': weight.shape,
-                                'dtype': weight.dtype,
-                                'mean': weight.float().mean().item(),
-                                'std': weight.float().std().item(),
-                                'min': weight.float().min().item(),
-                                'max': weight.float().max().item(),
-                                'device': weight.device
-                            }
-                            print(f"[PRECISION DEBUG OLD WEIGHTS]     {attr_name}_weight: shape={weight.shape}, mean={weight.float().mean().item():.8f}")
-                        else:
-                            print(f"[PRECISION DEBUG OLD WEIGHTS]     {attr_name} has no weight attribute")
-                    else:
-                        print(f"[PRECISION DEBUG OLD WEIGHTS]   No {attr_name} attribute found")
-
-                # 检查layer本身是否有weights参数
-                print(f"[PRECISION DEBUG OLD WEIGHTS]   Layer parameters: {[name for name, _ in layer.named_parameters()]}")
-
-                # 检查子模块中的权重
-                print(f"[PRECISION DEBUG OLD WEIGHTS]   Child modules: {[name for name, _ in layer.named_modules()]}")
-
-                # 检查所有torch.nn.Parameter (包括子模块的)
-                for name, param in layer.named_parameters():
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]   Found parameter {name}: shape={param.shape}, dtype={param.dtype}, device={param.device}")
-                    if any(x in name.lower() for x in ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'qkv', 'weight']):
-                        weight_info[f'named_{name}'] = {
-                            'shape': param.shape,
-                            'dtype': param.dtype,
-                            'mean': param.float().mean().item(),
-                            'std': param.float().std().item(),
-                            'min': param.float().min().item(),
-                            'max': param.float().max().item(),
-                            'device': param.device
-                        }
-                        print(f"[PRECISION DEBUG OLD WEIGHTS]     ***MATCHING PARAMETER {name}***: shape={param.shape}, mean={param.float().mean():.8f}")
-
-                # 如果还没有找到权重，检查所有参数的详细信息
-                if not weight_info:
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]   No matching parameters found. Checking all parameters:")
-                    for name, param in layer.named_parameters():
-                        weight_info[f'all_{name}'] = {
-                            'shape': param.shape,
-                            'dtype': param.dtype,
-                            'mean': param.float().mean().item(),
-                            'std': param.float().std().item(),
-                            'min': param.float().min().item(),
-                            'max': param.float().max().item(),
-                            'device': param.device
-                        }
-                        print(f"[PRECISION DEBUG OLD WEIGHTS]     ALL - {name}: shape={param.shape}, mean={param.float().mean():.8f}")
-
-                # 输出权重信息
-                for weight_key, weight_data in weight_info.items():
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]   {weight_key}:")
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]     shape={weight_data['shape']}")
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]     dtype={weight_data['dtype']}")
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]     device={weight_data['device']}")
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]     mean={weight_data['mean']:.8f}")
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]     std={weight_data['std']:.8f}")
-                    print(f"[PRECISION DEBUG OLD WEIGHTS]     range=[{weight_data['min']:.8f}, {weight_data['max']:.8f}]")
-
+           
             # DEBUG: 精度检查 - 老版本attention入口处的原始输入
             print(f"[PRECISION DEBUG OLD ENTRY] OLD VERSION:")
             print(f"[PRECISION DEBUG OLD ENTRY]   query_orig: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
