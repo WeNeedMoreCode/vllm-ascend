@@ -298,6 +298,10 @@ class AscendAttentionBackendImpl(AttentionImpl):
             if attn_metadata is None:
                 return output.view(num_tokens, self.hidden_size)
 
+            # DEBUG: 输出层名称用于对应新老版本的DEBUG信息
+            layer_name = getattr(layer, 'layer_name', 'unknown_layer')
+            print(f"[PRECISION DEBUG LAYER] ===== ENTERING LAYER: {layer_name} =====")
+
             # DEBUG: 精度检查 - 老版本attention入口处的原始输入
             print(f"[PRECISION DEBUG OLD ENTRY] OLD VERSION attention:")
             print(f"[PRECISION DEBUG OLD ENTRY]   query_orig: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
@@ -342,16 +346,22 @@ class AscendAttentionBackendImpl(AttentionImpl):
                     print(f"[PRECISION DEBUG OLD VERSION ENTRY]   key_orig: shape={key.shape}; mean={key.float().mean().item():.6f}; std={key.float().std().item():.6f}")
                     print(f"[PRECISION DEBUG OLD VERSION ENTRY]   value_orig: shape={value.shape}; mean={value.float().mean().item():.6f}; std={value.float().std().item():.6f}")
 
+                    # DEBUG: aligned_16前后的精度检查
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED_16] Before aligned_16:")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED_16]   query_orig: shape={query.shape}; mean={query.float().mean().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED_16]   key_orig: shape={key.shape}; mean={key.float().mean().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED_16]   value_orig: shape={value.shape}; mean={value.float().mean().item():.6f}")
+
                     # align q k v output tensors
                     query = aligned_16(query)
                     key = aligned_16(key)
                     value = aligned_16(value)
                     output = aligned_16(output)
 
-                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED] After aligned_16:")
-                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED]   query_aligned: shape={query.shape}; mean={query.float().mean().item():.6f}")
-                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED]   key_aligned: shape={key.shape}; mean={key.float().mean().item():.6f}")
-                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED]   value_aligned: shape={value.shape}; mean={value.float().mean().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED_16] After aligned_16:")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED_16]   query_aligned: shape={query.shape}; mean={query.float().mean().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED_16]   key_aligned: shape={key.shape}; mean={key.float().mean().item():.6f}")
+                    print(f"[PRECISION DEBUG OLD VERSION ALIGNED_16]   value_aligned: shape={value.shape}; mean={value.float().mean().item():.6f}")
 
                     # do reformat in case of broadcasted tensors
                     mask = mask.repeat(attn_metadata.seq_lens.size(0), 1, 1, 1)
