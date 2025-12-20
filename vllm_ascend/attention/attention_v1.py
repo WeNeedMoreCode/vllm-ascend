@@ -303,10 +303,11 @@ class AscendAttentionBackendImpl(AttentionImpl):
             print(f"[PRECISION DEBUG LAYER] ===== ENTERING LAYER: {layer_name} =====")
 
             # DEBUG: 精度检查 - 老版本attention入口处的原始输入
-            print(f"[PRECISION DEBUG OLD ENTRY] OLD VERSION attention:")
+            print(f"[PRECISION DEBUG OLD ENTRY] OLD VERSION:")
             print(f"[PRECISION DEBUG OLD ENTRY]   query_orig: shape={query.shape}; mean={query.float().mean().item():.6f}; std={query.float().std().item():.6f}")
             print(f"[PRECISION DEBUG OLD ENTRY]   key_orig: shape={key.shape}; mean={key.float().mean().item():.6f}; std={key.float().std().item():.6f}")
             print(f"[PRECISION DEBUG OLD ENTRY]   value_orig: shape={value.shape}; mean={value.float().mean().item():.6f}; std={value.float().std().item():.6f}")
+            print(f"[PRECISION DEBUG OLD ENTRY]   attn_state: {attn_metadata.attn_state}")
 
             num_actual_tokens = attn_metadata.num_actual_tokens
             assert layer._k_scale_float == 1.0 and layer._v_scale_float == 1.0
@@ -327,6 +328,13 @@ class AscendAttentionBackendImpl(AttentionImpl):
                 if self.key_cache is None:
                     self.key_cache, self.value_cache = kv_cache[0], kv_cache[1]
                 slots = attn_metadata.slot_mapping
+
+                # DEBUG: 精度检查 - 老版本reshape_and_cache前后的key/value变化
+                print(f"[PRECISION DEBUG OLD BEFORE RESHAPE]:")
+                print(f"[PRECISION DEBUG OLD BEFORE RESHAPE]   key_before: shape={key.shape}; mean={key.float().mean().item():.6f}; std={key.float().std().item():.6f}")
+                print(f"[PRECISION DEBUG OLD BEFORE RESHAPE]   value_before: shape={value.shape}; mean={value.float().mean().item():.6f}; std={value.float().std().item():.6f}")
+                print(f"[PRECISION DEBUG OLD BEFORE RESHAPE]   num_actual_tokens: {num_actual_tokens}")
+
                 torch_npu._npu_reshape_and_cache(
                     key=key[:num_actual_tokens],
                     value=value[:num_actual_tokens],
@@ -334,8 +342,14 @@ class AscendAttentionBackendImpl(AttentionImpl):
                     value_cache=self.value_cache,
                     slot_indices=slots)
 
+                # DEBUG: 精度检查 - 老版本reshape_and_cache后key/value是否被修改
+                print(f"[PRECISION DEBUG OLD AFTER RESHAPE]:")
+                print(f"[PRECISION DEBUG OLD AFTER RESHAPE]   key_after: shape={key.shape}; mean={key.float().mean().item():.6f}; std={key.float().std().item():.6f}")
+                print(f"[PRECISION DEBUG OLD AFTER RESHAPE]   value_after: shape={value.shape}; mean={value.float().mean().item():.6f}; std={value.float().std().item():.6f}")
+
             # V0-Style scheduler situation.
             if attn_metadata.attn_state == AscendAttentionState.PrefillNoCache:
+                print(f"[PRECISION DEBUG OLD PATH] Taking PrefillNoCache path (equivalent to NEW VERSION FALLBACK)")
                 assert attn_metadata is not None
                 assert attn_metadata.attn_mask is not None
                 mask = attn_metadata.attn_mask
@@ -386,6 +400,7 @@ class AscendAttentionBackendImpl(AttentionImpl):
                 output = output[:num_tokens, :, :]
                 print(f"[PRECISION DEBUG OLD VERSION ATTENTION]   final_output: shape={output.shape}; mean={output.float().mean().item():.6f}; std={output.float().std().item():.6f}")
             elif attn_metadata.attn_state == AscendAttentionState.PrefillCacheHit:
+                print(f"[PRECISION DEBUG OLD PATH] Taking PrefillCacheHit path")
                 assert attn_metadata is not None
                 assert attn_metadata.attn_mask is not None
                 compress_mask = attn_metadata.attn_mask
@@ -404,6 +419,7 @@ class AscendAttentionBackendImpl(AttentionImpl):
                     scale_value=self.scale,
                     out=output)
             elif attn_metadata.attn_state == AscendAttentionState.DecodeOnly:
+                print(f"[PRECISION DEBUG OLD PATH] Taking DecodeOnly path")
                 if is_310p():
                     # # seq_lens_tensor needs to be transferred to the device for 310P
                     attn_metadata.seq_lens = \
